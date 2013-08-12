@@ -2,7 +2,6 @@
  [{description, "Erlang cluster setup application"},
   {vsn, "0.1.0"},
   {registered, []},
-  {applications, [kernel,
-                  stdlib]},
+  {applications, [kernel, stdlib]},
   {mod, {westminster_app, []}},
-  {env, []}]}.
+  {env, [{central_node, 'hello@hao'}]}]}.
