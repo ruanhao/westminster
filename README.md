@@ -56,12 +56,12 @@ Finally, run `application:start(westminster).` in Erlang shell and congratulatio
 
 Acknowledgement
 ---------------
-[Shuai Li] is a bad man who persuade me (a Vimmer) to use Emacs.
+[Shuai Li] is a bad man who persuade me (a Vimmer) to use Emacs.  
 By the way, Emacs is good :p
 
 Is westminster good
 -------------------
-What about a cup of beverage :)
+What about a cup of beverage :)  
 [![Donate]](http://goo.gl/6zcOL)
 
   [akita]:  https://github.com/ruanhao/akita.git
