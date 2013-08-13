@@ -29,11 +29,14 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 
--record(state, {central_node}).
+-define(MAX_DOWN_TIMES, 100).
+
+-record(state, {central_node = undefined, 
+                downtimes = 0}).
 
 %%%===================================================================
 %%% API
@@ -84,8 +87,8 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call(_Request, _From, State) ->
-Reply = ok,
-{reply, Reply, State}.
+    Reply = ok,
+    {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -98,7 +101,7 @@ Reply = ok,
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(_Msg, State) ->
-{noreply, State}.
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -111,7 +114,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(init_config, _) ->
-    [{central_node, CentralNode}] = application:get_env(),
+    {ok, CentralNode} = application:get_env(central_node),
     do(connect_to_central_node),
     {noreply, #state{central_node = CentralNode}};
 
@@ -121,10 +124,46 @@ handle_info(connect_to_central_node, #state{central_node = CentralNode} = State)
         true ->
             do(connect_to_other_nodes),
             {noreply, State};
-        _ ->
+        false ->
             {stop, "central node unavailable", State}
     end;
 
+handle_info(connect_to_other_nodes, #state{central_node = CentralNode} = State) ->
+    NodesAroundCentral = rpc:call(CentralNode, erlang, nodes, []),
+    connect_nodes(NodesAroundCentral, init),
+    do(set_ticktime),
+    {noreply, State};
+
+handle_info(set_ticktime, #state{central_node = CentralNode} = State) ->
+    Query = rpc:call(CentralNode, net_kernel, get_net_ticktime, []),
+    Ticktime = case Query of
+                   {ongoing_change_to, T} -> T;
+                   ignored -> 60;
+                   T -> T
+               end,
+    net_kernel:set_net_ticktime(Ticktime),
+    error_logger:info_msg("cluster established (with ticktime synchronized)~n", []),
+    do(monitor_nodes),
+    {noreply, State};
+
+handle_info(monitor_nodes, State) ->
+    Nodes = nodes(connected),                % because this is a hidden node,
+                                             % that's why *connected* is used.
+    [erlang:monitor_node(N, true) || N <- Nodes],
+    {noreply, State};
+
+handle_info({nodedown, DownNode}, #state{downtimes = Times} = State) ->
+    if
+        Times > ?MAX_DOWN_TIMES -> 
+            error_logger:error_msg("too many times of node down, please check the network~n", []),
+            exit("too many times of node down");
+        true -> 
+            ok
+    end,
+    connect_nodes([DownNode], normal),
+    erlang:monitor_node(DownNode, true),
+    {noreply, State#state{downtimes = Times + 1}};
+    
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -140,7 +179,7 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
-ok.
+    ok.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -151,11 +190,28 @@ ok.
 %% @end
 %%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
-{ok, State}.
+    {ok, State}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
 do(Something) ->
     timer:send_after(1000, Something).
-    
+
+connect_nodes([], init) ->
+    error_logger:info_msg("cluster established (without ticktime synchronized)~n", []);
+
+%% this clause is used when certain node is down
+connect_nodes([], normal) ->
+    error_logger:info_msg("cluster established~n", []);
+
+connect_nodes([H | T], Stat) ->
+    IsConnected = net_kernel:connect_node(H),
+    case IsConnected of
+        true ->
+            error_logger:info_msg("connect to node (~w) successfully~n", [H]),
+            connect_nodes(T, Stat);
+        false ->
+            error_logger:error_msg("connect to node (~w) unsuccessfully~n", [H]),
+            exit("node unavailable")
+    end.
