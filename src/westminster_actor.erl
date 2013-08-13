@@ -201,7 +201,7 @@ do(Something) ->
 connect_nodes([], init) ->
     error_logger:info_msg("cluster established (without ticktime synchronized)~n", []);
 
-%% this clause is used when certain node is down
+%% this clause is used to reconnect the down node
 connect_nodes([], normal) ->
     error_logger:info_msg("cluster established~n", []);
 
