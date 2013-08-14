@@ -153,6 +153,7 @@ handle_info(monitor_nodes, State) ->
     {noreply, State};
 
 handle_info({nodedown, DownNode}, #state{downtimes = Times} = State) ->
+    mark_unmeshed(),
     if
         Times > ?MAX_DOWN_TIMES -> 
             error_logger:error_msg("too many times of node down, please check the network~n", []),
@@ -203,6 +204,7 @@ connect_nodes([], init) ->
 
 %% this clause is used to reconnect the down node
 connect_nodes([], normal) ->
+    mark_meshed(),
     error_logger:info_msg("cluster established~n", []);
 
 connect_nodes([H | T], Stat) ->
@@ -215,3 +217,9 @@ connect_nodes([H | T], Stat) ->
             error_logger:error_msg("connect to node (~w) unsuccessfully~n", [H]),
             exit("node unavailable")
     end.
+
+mark_meshed() ->
+    application:set_env(application:get_application(), cluster_meshed, true).
+
+mark_unmeshed() ->
+    application:set_env(application:get_application(), cluster_meshed, false).

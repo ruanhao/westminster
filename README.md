@@ -52,12 +52,13 @@ Remember to tart your hidden node **with westminster load path appointed**. Like
 ```bash
 erl -sname your_node_name -pa $PWD/ebin $PWD/deps/*/ebin -hidden -setcookie cluster_cookie
 ```
-Finally, run `application:start(westminster).` in Erlang shell and congratulations.
+Finally, run `application:start(westminster).` in Erlang shell.  
+And you can check the state by `application:get_env(westminster, cluster_meshed).`.
 
 Acknowledgement
 ---------------
-[Shuai Li] is a bad man who persuade me (a Vimmer) to use Emacs.  
-By the way, Emacs is good :p
+[Shuai Li] is a devil who persuade me (a Vimmer) to try Emacs.  
+By the way, I like Emacs now :p
 
 Is westminster good
 -------------------
