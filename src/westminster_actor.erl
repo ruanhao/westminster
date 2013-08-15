@@ -156,7 +156,7 @@ handle_info({nodedown, DownNode}, #state{downtimes = Times} = State) ->
     mark_unmeshed(),
     if
         Times > ?MAX_DOWN_TIMES -> 
-            Msg = io_lib:format("too many times of node down, please check the network~n", []),
+            Msg = io_lib:format("too many times of node down, please check the network", []),
             exit(Msg);
         true -> 
             ok
@@ -215,7 +215,7 @@ connect_nodes([H | T], Stat) ->
             error_logger:info_msg("connect to node (~w) successfully~n", [H]),
             connect_nodes(T, Stat);
         false ->
-            Msg = io_lib:format("connect to node (~w) unsuccessfully~n", [H]),
+            Msg = io_lib:format("connect to node (" ++ atom_to_list(H) ++ ") unsuccessfully", []),
             exit(Msg)
     end.
 
