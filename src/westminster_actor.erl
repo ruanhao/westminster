@@ -200,6 +200,7 @@ do(Something) ->
     timer:send_after(1000, Something).
 
 connect_nodes([], init) ->
+    mark_meshed(),
     error_logger:info_msg("cluster established (without ticktime synchronized)~n", []);
 
 %% this clause is used to reconnect the down node
@@ -219,7 +220,7 @@ connect_nodes([H | T], Stat) ->
     end.
 
 mark_meshed() ->
-    application:set_env(application:get_application(), cluster_meshed, true).
+    application:set_env(westminster, cluster_meshed, true).
 
 mark_unmeshed() ->
-    application:set_env(application:get_application(), cluster_meshed, false).
+    application:set_env(westminster, cluster_meshed, false).
