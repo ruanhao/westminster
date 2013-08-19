@@ -215,8 +215,22 @@ connect_nodes([H | T], Stat) ->
             error_logger:info_msg("connect to node (~w) successfully~n", [H]),
             connect_nodes(T, Stat);
         false ->
-            Msg = io_lib:format("connect to node (" ++ atom_to_list(H) ++ ") unsuccessfully", []),
-            exit(Msg)
+            timer:sleep(10000),
+            CheckAgain = net_kernel:connect_node(H),
+            case CheckAgain of
+                true ->
+                    error_logger:info_msg("connect to node (~w) successfully~n", [H]),
+                    connect_nodes(T, Stat);
+                false ->
+                    case Stat of 
+                        init ->
+                            Msg = io_lib:format("connect to node (" ++ atom_to_list(H) ++ ") unsuccessfully", []),
+                            exit(Msg);
+                        normal ->
+                            error_logger:error_msg("connect to node (~w) unsuccessfully~n", [H]),
+                            connect_nodes(T, Stat)
+                    end
+            end
     end.
 
 mark_meshed() ->
