@@ -146,6 +146,7 @@ handle_info(set_ticktime, #state{central_node = CentralNode} = State) ->
     {noreply, State};
 
 handle_info({nodedown, DownNode}, #state{downtimes = Times} = State) ->
+    error_logger:error_msg("node (~w) is down~n", [DownNode]),
     mark_unmeshed(),
     if
         Times > ?MAX_DOWN_TIMES -> 
