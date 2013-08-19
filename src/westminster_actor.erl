@@ -143,13 +143,6 @@ handle_info(set_ticktime, #state{central_node = CentralNode} = State) ->
                end,
     net_kernel:set_net_ticktime(Ticktime),
     error_logger:info_msg("cluster established (with ticktime synchronized)~n", []),
-    do(monitor_nodes),
-    {noreply, State};
-
-handle_info(monitor_nodes, State) ->
-    Nodes = nodes(connected),                % because this is a hidden node,
-                                             % that's why *connected* is used.
-    [erlang:monitor_node(N, true) || N <- Nodes],
     {noreply, State};
 
 handle_info({nodedown, DownNode}, #state{downtimes = Times} = State) ->
@@ -162,7 +155,6 @@ handle_info({nodedown, DownNode}, #state{downtimes = Times} = State) ->
             ok
     end,
     connect_nodes([DownNode], normal),
-    erlang:monitor_node(DownNode, true),
     {noreply, State#state{downtimes = Times + 1}};
     
 handle_info(_Info, State) ->
@@ -206,13 +198,14 @@ connect_nodes([], init) ->
 %% this clause is used to reconnect the down node
 connect_nodes([], normal) ->
     mark_meshed(),
-    error_logger:info_msg("cluster established~n", []);
+    error_logger:info_msg("cluster updated~n", []);
 
 connect_nodes([H | T], Stat) ->
     IsConnected = net_kernel:connect_node(H),
     case IsConnected of
         true ->
             error_logger:info_msg("connect to node (~w) successfully~n", [H]),
+            erlang:monitor_node(H, true),
             connect_nodes(T, Stat);
         false ->
             timer:sleep(10000),
@@ -220,6 +213,7 @@ connect_nodes([H | T], Stat) ->
             case CheckAgain of
                 true ->
                     error_logger:info_msg("connect to node (~w) successfully~n", [H]),
+                    erlang:monitor_node(H, true),
                     connect_nodes(T, Stat);
                 false ->
                     case Stat of 
